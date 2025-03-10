@@ -16,3 +16,12 @@ Terus, CPU juga kelihatan naik-turun di angka 1-2%. Setelah gw pikir-pikir, ini 
 
 Setelah optimasi ini, memori masih naik turun, tapi turun lagi setelah GC jalan. CPU juga tetap di 1-2%, yang masih masuk akal buat animasi ringan. **Intinya, performanya udah jauh lebih stabil dan nggak ada kebocoran memori.**
 
+---
+
+## **Update: Preload Gambar**  
+
+Gw notice kalau dengan pendekatan sebelumnya memanfaatkan timer dan secara terus menerus men-generate gambar, ini makan resource, baik di memori maupun CPU. Maka dari itu, pendekatan selanjutnya adalah **melakukan preload gambar** sebelum animasi jalan.  
+
+Dengan preload, gambar frame-frame animasi sudah ada di memori sejak awal, jadi waktu render nggak perlu alokasi tambahan. Harapannya, ini bisa ngurangin beban CPU dan bikin animasi lebih mulus.  
+
+![Preload Gambar](gambar/preload1.PNG)

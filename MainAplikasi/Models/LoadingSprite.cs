@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Media;
@@ -9,7 +10,7 @@ namespace MainAplikasi.Models
 {
     public class LoadingSprite : INotifyPropertyChanged
     {
-        private readonly WriteableBitmap spriteSheet;
+        private readonly List<WriteableBitmap> frames = new();
         private readonly int frameWidth = 256;
         private readonly int frameHeight = 256;
         private readonly int totalFrames = 1;
@@ -30,12 +31,23 @@ namespace MainAplikasi.Models
 
         public LoadingSprite()
         {
-            // Load sprite sheet sekali saja
+            // Load sprite sheet
             BitmapImage image = new BitmapImage(new Uri("pack://application:,,,/Assets/loading.png", UriKind.Absolute));
-            spriteSheet = new WriteableBitmap(image);
+            WriteableBitmap spriteSheet = new WriteableBitmap(image);
 
-            // Inisialisasi frame kosong untuk menampung animasi
-            SpriteFrame = new WriteableBitmap(frameWidth, frameHeight, 96, 96, PixelFormats.Bgra32, null);
+            // Preload semua frame ke dalam list
+            for (int i = 0; i < totalFrames; i++)
+            {
+                Int32Rect sourceRect = new Int32Rect(i * frameWidth, 0, frameWidth, frameHeight);
+                WriteableBitmap frame = new WriteableBitmap(frameWidth, frameHeight, 96, 96, PixelFormats.Bgra32, null);
+                byte[] pixelData = new byte[frameHeight * ((frameWidth * 32 + 7) / 8)];
+                spriteSheet.CopyPixels(sourceRect, pixelData, (frameWidth * 32 + 7) / 8, 0);
+                frame.WritePixels(new Int32Rect(0, 0, frameWidth, frameHeight), pixelData, (frameWidth * 32 + 7) / 8, 0);
+                frames.Add(frame);
+            }
+
+            // Set frame awal
+            SpriteFrame = frames[0];
 
             // Timer update animasi
             timer = new DispatcherTimer
@@ -48,23 +60,12 @@ namespace MainAplikasi.Models
 
         private void UpdateFrame(object sender, EventArgs e)
         {
-            if (currentFrame >= totalFrames)
-                currentFrame = 0;
+            currentFrame = (currentFrame + 1) % totalFrames;
+            SpriteFrame = frames[currentFrame];
 
-            // Ambil data pixel dari sprite sheet
-            Int32Rect sourceRect = new Int32Rect(currentFrame * frameWidth, 0, frameWidth, frameHeight);
-            int stride = (frameWidth * 32 + 7) / 8;
-            byte[] pixelData = new byte[frameHeight * stride];
-
-            spriteSheet.CopyPixels(sourceRect, pixelData, stride, 0);
-
-            // Update WriteableBitmap dengan pixel baru (tanpa alokasi baru)
-            SpriteFrame.WritePixels(new Int32Rect(0, 0, frameWidth, frameHeight), pixelData, stride, 0);
-
-            // Efek rotasi
+            // Update rotasi
             RotationAngle = (RotationAngle + 30) % 360;
 
-            currentFrame++;
             OnPropertyChanged(nameof(SpriteFrame));
         }
 
