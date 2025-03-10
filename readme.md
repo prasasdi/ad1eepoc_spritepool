@@ -1,4 +1,4 @@
-# **Kesimpulan Gw Sampai Sekarang**
+﻿# **Kesimpulan Gw Sampai Sekarang**
 
 Awalnya, gw mau bikin animasi loading di WPF tanpa GIF. Gw pilih sprite sheet karena ini teknik lama yang banyak dipakai di aplikasi desktop sebelum GIF bisa di-handle dengan baik. Supaya lebih rapi, gw pakai MVVM, jadi nggak ada code-behind.
 
@@ -25,3 +25,16 @@ Gw notice kalau dengan pendekatan sebelumnya memanfaatkan timer dan secara terus
 Dengan preload, gambar frame-frame animasi sudah ada di memori sejak awal, jadi waktu render nggak perlu alokasi tambahan. Harapannya, ini bisa ngurangin beban CPU dan bikin animasi lebih mulus.  
 
 ![Preload Gambar](gambar/preload1.PNG)
+
+---
+
+## **Update: Buffering Tambahan**  
+
+Setelah preload gambar, gw nemu kalau masih ada sedikit spike di CPU dan memori, walaupun udah jauh lebih stabil. Solusinya, gw coba **buffering tambahan** buat nyiapin beberapa frame di depan sebelum ditampilkan.  
+
+Cara kerjanya:  
+1. **Load beberapa frame sekaligus ke buffer**, bukan cuma satu frame per tick.  
+2. **Gunakan buffer yang di-reuse** buat nampilin animasi, jadi nggak ada alokasi baru tiap frame.  
+3. **Optimasi cache WPF** dengan memastikan nggak ada re-render yang nggak perlu.  
+
+Hasilnya? CPU usage lebih konsisten, dan memori lebih stabil tanpa spike yang aneh. Gw bakal terus lihat apakah ada optimasi lain yang bisa diterapin. 🚀
