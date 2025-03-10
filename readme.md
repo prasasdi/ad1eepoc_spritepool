@@ -10,6 +10,7 @@ Gw coba ganti pendekatan pakai **`WriteableBitmap`**, biar bisa update gambar la
 - **GC masih jalan**, jadi naik turunnya karena alokasi kecil yang dibersihin.
 - **WPF pakai Deferred Rendering**, jadi ada cache tambahan sebelum gambar ditampilkan.
 - **`WritePixels()` tetap butuh buffer sementara**, jadi tetap ada sedikit alokasi tiap frame.
+![Dari memori kelihatan naik turun setelah di GC](gambar/unoptimize-sprites.PNG)
 
 Terus, CPU juga kelihatan naik-turun di angka 1-2%. Setelah gw pikir-pikir, ini wajar karena tiap frame tetap butuh proses buat update tampilan. Biar lebih efisien, gw coba beberapa optimasi:
 - **Set `RenderOptions.BitmapScalingMode="NearestNeighbor"`** biar nggak ada overhead dari smoothing.
@@ -27,6 +28,7 @@ Keuntungan buffering:
 - **GC lebih minim**, karena nggak ada objek baru yang terus dialokasikan.
 
 Setelah implementasi buffering ini, **memori lebih stabil dan CPU usage turun sedikit** dibanding sebelumnya. Gw rasa ini pendekatan yang paling optimal buat animasi sprite di WPF.
+![Jauh lebih stabil ketimbang sebelumnya](gambar/preload1.PNG)
 
 ## **Teknologi yang Dipakai**
 - **.NET 6**
