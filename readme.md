@@ -1,9 +1,11 @@
 ﻿# **Kesimpulan Gw Sampai Sekarang**
 
+## **Awal Mula**
 Awalnya, gw mau bikin animasi loading di WPF tanpa GIF. Gw pilih sprite sheet karena ini teknik lama yang banyak dipakai di aplikasi desktop sebelum GIF bisa di-handle dengan baik. Supaya lebih rapi, gw pakai MVVM, jadi nggak ada code-behind.
 
 Di awal implementasi, gw pakai **`CroppedBitmap`** buat motong frame dari sprite sheet. Animasi jalan, tapi masalahnya memori terus naik. Setelah dicek, ternyata tiap update frame bikin objek baru, dan itu bikin alokasi memori numpuk.
 
+## **Optimasi dengan WriteableBitmap**
 Gw coba ganti pendekatan pakai **`WriteableBitmap`**, biar bisa update gambar langsung tanpa bikin objek baru. Hasilnya lebih bagus, tapi tetap ada naik-turun di penggunaan memori. Setelah gw selidiki, ada beberapa penyebabnya:
 - **GC masih jalan**, jadi naik turunnya karena alokasi kecil yang dibersihin.
 - **WPF pakai Deferred Rendering**, jadi ada cache tambahan sebelum gambar ditampilkan.
@@ -16,25 +18,23 @@ Terus, CPU juga kelihatan naik-turun di angka 1-2%. Setelah gw pikir-pikir, ini 
 
 Setelah optimasi ini, memori masih naik turun, tapi turun lagi setelah GC jalan. CPU juga tetap di 1-2%, yang masih masuk akal buat animasi ringan. **Intinya, performanya udah jauh lebih stabil dan nggak ada kebocoran memori.**
 
+## **Buffering Tambahan**
+Gw notice kalau dengan pendekatan sebelumnya memanfaatkan `DispatcherTimer` yang terus menerus men-generate gambar, dan itu makan resource, baik memori maupun CPU. Maka dari itu, pendekatan selanjutnya adalah melakukan **preload gambar ke buffer** sebelum animasi mulai jalan.
+
+Keuntungan buffering:
+- **Mengurangi alokasi memori tiap frame** karena gambar sudah ada di buffer.
+- **CPU usage lebih stabil**, karena nggak perlu ngambil ulang dari `WriteableBitmap` setiap waktu.
+- **GC lebih minim**, karena nggak ada objek baru yang terus dialokasikan.
+
+Setelah implementasi buffering ini, **memori lebih stabil dan CPU usage turun sedikit** dibanding sebelumnya. Gw rasa ini pendekatan yang paling optimal buat animasi sprite di WPF.
+
+## **Teknologi yang Dipakai**
+- **.NET 6**
+- **WPF (Windows Presentation Foundation)**
+- **MVVM Pattern**
+- **WriteableBitmap buat optimasi frame update**
+- **DispatcherTimer buat update animasi**
+
 ---
 
-## **Update: Preload Gambar**  
-
-Gw notice kalau dengan pendekatan sebelumnya memanfaatkan timer dan secara terus menerus men-generate gambar, ini makan resource, baik di memori maupun CPU. Maka dari itu, pendekatan selanjutnya adalah **melakukan preload gambar** sebelum animasi jalan.  
-
-Dengan preload, gambar frame-frame animasi sudah ada di memori sejak awal, jadi waktu render nggak perlu alokasi tambahan. Harapannya, ini bisa ngurangin beban CPU dan bikin animasi lebih mulus.  
-
-![Preload Gambar](gambar/preload1.PNG)
-
----
-
-## **Update: Buffering Tambahan**  
-
-Setelah preload gambar, gw nemu kalau masih ada sedikit spike di CPU dan memori, walaupun udah jauh lebih stabil. Solusinya, gw coba **buffering tambahan** buat nyiapin beberapa frame di depan sebelum ditampilkan.  
-
-Cara kerjanya:  
-1. **Load beberapa frame sekaligus ke buffer**, bukan cuma satu frame per tick.  
-2. **Gunakan buffer yang di-reuse** buat nampilin animasi, jadi nggak ada alokasi baru tiap frame.  
-3. **Optimasi cache WPF** dengan memastikan nggak ada re-render yang nggak perlu.  
-
-Hasilnya? CPU usage lebih konsisten, dan memori lebih stabil tanpa spike yang aneh. Gw bakal terus lihat apakah ada optimasi lain yang bisa diterapin. 🚀
+Kalau ada update lagi, gw bakal revisi kesimpulan ini. Sejauh ini, hasilnya udah cukup memuaskan! 🚀
