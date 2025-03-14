@@ -3,10 +3,15 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Threading;
 
 namespace MainAplikasi.Models
 {
+    public enum FrameRate
+    {
+        FPS30,
+        FPS60
+    }
+
     public class LoadingSprite : INotifyPropertyChanged
     {
         private readonly WriteableBitmap spriteSheet;
@@ -14,10 +19,11 @@ namespace MainAplikasi.Models
         private readonly int frameHeight = 256;
         private readonly int totalFrames = 1;
         private int currentFrame = 0;
-        private readonly DispatcherTimer timer;
         private double rotationAngle = 0;
 
-        private readonly WriteableBitmap[] frameBuffer; // Buffer frame
+        private readonly WriteableBitmap[] frameBuffer;
+        private readonly FrameRate frameRate;
+        private int frameSkip = 0; // Untuk handling 30 FPS di layar 60 Hz
 
         public WriteableBitmap SpriteFrame { get; private set; }
         public double RotationAngle
@@ -30,8 +36,10 @@ namespace MainAplikasi.Models
             }
         }
 
-        public LoadingSprite()
+        public LoadingSprite(FrameRate fps = FrameRate.FPS60)
         {
+            frameRate = fps;
+
             // Load sprite sheet sekali saja
             BitmapImage image = new BitmapImage(new Uri("pack://application:,,,/Assets/loading.png", UriKind.Absolute));
             spriteSheet = new WriteableBitmap(image);
@@ -54,28 +62,28 @@ namespace MainAplikasi.Models
             // Set frame awal
             SpriteFrame = frameBuffer[0];
 
-            // Timer update animasi
-            timer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(100)
-            };
-            timer.Tick += UpdateFrame;
-            timer.Start();
+            // Gunakan CompositionTarget.Rendering untuk sinkronisasi ke layar
+            CompositionTarget.Rendering += UpdateFrame;
         }
 
         private void UpdateFrame(object sender, EventArgs e)
         {
+            if (frameRate == FrameRate.FPS30 && frameSkip % 2 != 0) // Untuk 30 FPS, update setiap 2 frame rendering
+            {
+                frameSkip++;
+                return;
+            }
+
             if (currentFrame >= totalFrames)
                 currentFrame = 0;
 
-            // Ganti referensi langsung tanpa salin pixel
             SpriteFrame = frameBuffer[currentFrame];
-
-            // Efek rotasi
             RotationAngle = (RotationAngle + 30) % 360;
 
             currentFrame++;
             OnPropertyChanged(nameof(SpriteFrame));
+
+            frameSkip++;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
