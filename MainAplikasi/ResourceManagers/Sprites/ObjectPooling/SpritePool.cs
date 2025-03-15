@@ -85,5 +85,13 @@ namespace MainAplikasi.ResourceManagers.Sprites.ObjectPooling
         {
             return _pool.Count;
         }
+
+        /// <summary>
+        /// Cek apakah bitmap masih ada di dalam pool.
+        /// </summary>
+        public bool Contains(WriteableBitmap bitmap)
+        {
+            return _pool.Contains(bitmap);
+        }
     }
 }

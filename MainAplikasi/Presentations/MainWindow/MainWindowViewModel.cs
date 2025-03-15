@@ -15,8 +15,10 @@ namespace MainAplikasi.Presentations.MainWindow
         {
             _serviceProvider = serviceProvider;
             LoadingSprite = new(FrameRate.FPS60);
+            RunSprite = new(FrameRate.FPS60);
         }
 
         public LoadingSprite LoadingSprite { get; set; }
+        public RunSprite RunSprite { get; set; }
     }
 }
