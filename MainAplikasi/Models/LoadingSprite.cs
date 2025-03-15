@@ -1,8 +1,10 @@
-﻿using System;
+﻿using MainAplikasi.ResourceManagers.Sprites.ObjectPooling;
+using System;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 
 namespace MainAplikasi.Models
 {
@@ -25,6 +27,8 @@ namespace MainAplikasi.Models
         private readonly FrameRate frameRate;
         private int frameSkip = 0; // Untuk handling 30 FPS di layar 60 Hz
 
+        private readonly SpritePool spritePool; // Tambahkan SpritePool untuk pengelolaan memory bitmap
+
         public WriteableBitmap SpriteFrame { get; private set; }
         public double RotationAngle
         {
@@ -36,9 +40,17 @@ namespace MainAplikasi.Models
             }
         }
 
+        /// <summary>
+        /// Konstruktor untuk LoadingSprite. 
+        /// Menggunakan SpritePool untuk mengelola frame agar lebih efisien dalam alokasi memori.
+        /// </summary>
+        /// <param name="fps">Frame rate animasi.</param>
         public LoadingSprite(FrameRate fps = FrameRate.FPS60)
         {
             frameRate = fps;
+
+            // Inisialisasi SpritePool dengan kapasitas sesuai kebutuhan animasi
+            spritePool = new SpritePool(frameWidth, frameHeight, PixelFormats.Bgra32, totalFrames);
 
             // Load sprite sheet sekali saja
             BitmapImage image = new BitmapImage(new Uri("pack://application:,,,/Assets/loading.png", UriKind.Absolute));
@@ -50,7 +62,14 @@ namespace MainAplikasi.Models
             for (int i = 0; i < totalFrames; i++)
             {
                 Int32Rect sourceRect = new Int32Rect(i * frameWidth, 0, frameWidth, frameHeight);
-                frameBuffer[i] = new WriteableBitmap(frameWidth, frameHeight, 96, 96, PixelFormats.Bgra32, null);
+
+                // Ambil bitmap dari pool, kalau pool kosong, warning
+                frameBuffer[i] = spritePool.GetBitmap();
+                if (frameBuffer[i] == null)
+                {
+                    Console.WriteLine($"[WARNING] No available bitmaps in pool for frame {i}");
+                    continue;
+                }
 
                 int stride = (frameWidth * 32 + 7) / 8;
                 byte[] pixelData = new byte[frameHeight * stride];
@@ -66,6 +85,10 @@ namespace MainAplikasi.Models
             CompositionTarget.Rendering += UpdateFrame;
         }
 
+        /// <summary>
+        /// Fungsi untuk mengupdate frame animasi.
+        /// Menggunakan SpritePool agar tidak terus-menerus membuat instance baru.
+        /// </summary>
         private void UpdateFrame(object sender, EventArgs e)
         {
             if (frameRate == FrameRate.FPS30 && frameSkip % 2 != 0) // Untuk 30 FPS, update setiap 2 frame rendering
@@ -77,7 +100,12 @@ namespace MainAplikasi.Models
             if (currentFrame >= totalFrames)
                 currentFrame = 0;
 
+            // Kembalikan frame sebelumnya ke pool sebelum mengganti ke frame baru
+            spritePool.ReturnBitmap(SpriteFrame);
+
+            // Ambil frame baru dari buffer
             SpriteFrame = frameBuffer[currentFrame];
+
             RotationAngle = (RotationAngle + 30) % 360;
 
             currentFrame++;
@@ -86,6 +114,9 @@ namespace MainAplikasi.Models
             frameSkip++;
         }
 
+        /// <summary>
+        /// Event untuk memberitahu perubahan properti ke UI.
+        /// </summary>
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged(string propertyName) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

@@ -113,3 +113,41 @@ var sprite30FPS = new LoadingSprite(FrameRate.FPS30);
 
 Sekarang tinggal pilih FPS yang lu butuhin tanpa ribet! 🚀🔥
 
+---
+
+# 🖼️ Sprite Animation dengan Pooling (LoadingSprite)
+
+Gw bikin ini buat **sprite animation yang lebih efisien**, gak boros memori, dan tetep smooth.  
+Sebelumnya, **bitmap dibuat terus-menerus**, yang bikin alokasi memori naik terus—**ini boros, bego!**  
+Sekarang, **pakai `SpritePool`**, jadi gak ada alokasi baru yang gak perlu.  
+
+---
+
+## 🔥 Apa yang Di-fix?
+| Sebelum ❌ | Sekarang ✅ |
+|-----------|-----------|
+| **Bitmap baru dibuat tiap update** | **Pakai `SpritePool`, reuse bitmap!** |
+| **Gak ada batasan pool** | **Kalau pool habis, ada warning!** |
+| **Bitmap lama gak dikembalikan** | **Sekarang semua frame dikembalikan ke pool!** |
+| **Lama-lama ngelag karena memori kepake terus** | **Sekarang lebih stabil, gak ada beban tambahan!** |
+
+![](gambar/spritepool.PNG)
+
+---
+
+## 🎯 Cara Pakai
+1️⃣ **Pastikan lo udah setup `SpritePool`**  
+2️⃣ **Gunakan di `LoadingSprite` biar animasi lo lebih optimal**  
+3️⃣ **Jangan lupa binding di XAML biar MVVM tetep kepake**  
+
+---
+
+## 📌 Contoh Binding di XAML
+Tinggal tempelin ini di XAML **tanpa perlu code-behind**. **MVVM tetap jalan!**
+```xml
+<Image Width="64" Height="64" Source="{Binding LoadingSprite.SpriteFrame}" Margin="30,30">
+    <Image.RenderTransform>
+        <RotateTransform Angle="{Binding LoadingSprite.RotationAngle}" CenterX="32" CenterY="32"/>
+    </Image.RenderTransform>
+</Image>
+
