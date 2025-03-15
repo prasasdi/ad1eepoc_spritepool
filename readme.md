@@ -1,82 +1,56 @@
-﻿# **POC Animation with Sprite in WPF**
+﻿# 🚀 **POC Sprite Animation in WPF**
 
-# **Teknologi yang Dipakai**
+## 🛠 **Teknologi yang Dipakai**
 - **.NET 6**
-- **WPF (Windows Presentation Foundation)**
-- **MVVM Pattern**
-- **WriteableBitmap buat optimasi frame update**
-- **DispatcherTimer buat update animasi**
+- **WPF (MVVM Pattern)**
+- **WriteableBitmap** → Optimasi frame update
+- **CompositionTarget.Rendering** → Animasi smooth
+- **Sprite Pooling** → Efisiensi memori
 
 ---
 
-# **Kesimpulan Gw Sampai Sekarang**
+## 🎬 **Awal Mula: GIF vs Sprite Sheet**
+Gw butuh animasi loading tanpa GIF, jadi pakai **sprite sheet**. Gw pilih sprite sheet karena ini teknik lama yang banyak dipakai di aplikasi desktop sebelum GIF bisa di-handle dengan baik.. Awalnya pakai **CroppedBitmap**, tapi memori naik terus karena alokasi objek baru tiap frame. 😵
 
-## **Awal Mula**
-Awalnya, gw mau bikin animasi loading di WPF tanpa GIF. Gw pilih sprite sheet karena ini teknik lama yang banyak dipakai di aplikasi desktop sebelum GIF bisa di-handle dengan baik. Supaya lebih rapi, gw pakai MVVM, jadi nggak ada code-behind.
+Animasi jalan, tapi masalahnya memori terus naik. Setelah dicek, ternyata tiap update frame bikin objek baru, dan itu bikin alokasi memori numpuk.
 
-Di awal implementasi, gw pakai **`CroppedBitmap`** buat motong frame dari sprite sheet. Animasi jalan, tapi masalahnya memori terus naik. Setelah dicek, ternyata tiap update frame bikin objek baru, dan itu bikin alokasi memori numpuk.
+![](gambar/unoptimize-sprites.PNG)
 
-## **Optimasi dengan WriteableBitmap**
-Gw coba ganti pendekatan pakai **`WriteableBitmap`**, biar bisa update gambar langsung tanpa bikin objek baru. Hasilnya lebih bagus, tapi tetap ada naik-turun di penggunaan memori. Setelah gw selidiki, ada beberapa penyebabnya:
-- **GC masih jalan**, jadi naik turunnya karena alokasi kecil yang dibersihin.
-- **WPF pakai Deferred Rendering**, jadi ada cache tambahan sebelum gambar ditampilkan.
-- **`WritePixels()` tetap butuh buffer sementara**, jadi tetap ada sedikit alokasi tiap frame.
-![Dari memori kelihatan naik turun setelah di GC](gambar/unoptimize-sprites.PNG)
-
-Terus, CPU juga kelihatan naik-turun di angka 1-2%. Setelah gw pikir-pikir, ini wajar karena tiap frame tetap butuh proses buat update tampilan. Biar lebih efisien, gw coba beberapa optimasi:
-- **Set `RenderOptions.BitmapScalingMode="NearestNeighbor"`** biar nggak ada overhead dari smoothing.
-- **Timer diubah ke `DispatcherPriority.Render`** biar pas dengan rendering WPF.
-- **Pastikan `WriteableBitmap` di-reuse**, bukan bikin baru tiap frame.
-
-Setelah optimasi ini, memori masih naik turun, tapi turun lagi setelah GC jalan. CPU juga tetap di 1-2%, yang masih masuk akal buat animasi ringan. **Intinya, performanya udah jauh lebih stabil dan nggak ada kebocoran memori.**
-
-## **Buffering Tambahan**
-Gw notice kalau dengan pendekatan sebelumnya memanfaatkan `DispatcherTimer` yang terus menerus men-generate gambar, dan itu makan resource, baik memori maupun CPU. Maka dari itu, pendekatan selanjutnya adalah melakukan **preload gambar ke buffer** sebelum animasi mulai jalan.
-
-Keuntungan buffering:
-- **Mengurangi alokasi memori tiap frame** karena gambar sudah ada di buffer.
-- **CPU usage lebih stabil**, karena nggak perlu ngambil ulang dari `WriteableBitmap` setiap waktu.
-- **GC lebih minim**, karena nggak ada objek baru yang terus dialokasikan.
-
-Setelah implementasi buffering ini, **memori lebih stabil dan CPU usage turun sedikit** dibanding sebelumnya. Gw rasa ini pendekatan yang paling optimal buat animasi sprite di WPF.
-![Jauh lebih stabil ketimbang sebelumnya](gambar/preload1.PNG)
-
-
+Btw, gw pakai MVVM sesuai dengan arsitektur WPF umumnya.
 
 ---
 
-# Update 15 Maret 2025: Peralihan ke CompositionTarget.Rendering untuk Animasi Super Smooth
+## 🔧 **Optimasi dengan WriteableBitmap**
+✅ **WriteableBitmap** memungkinkan update tanpa alokasi baru. Namun, tetap ada naik-turun memori karena:
+- **GC masih berjalan** 🔄
+- **WPF pakai Deferred Rendering** 🖼️
+- **WritePixels() tetap butuh buffer sementara** 📌
 
-## Kenapa Gw Lakuin Ini?
-Awalnya, animasi jalan di **60 FPS** pakai `DispatcherTimer`, tapi kadang suka ada **cegukan** (stutter). Gw ganti ke **`CompositionTarget.Rendering`**, yang langsung sync ke refresh rate layar. Hasilnya? **Super smooth, bebas stutter!**
+📌 **Solusi:**
+- Set **`RenderOptions.BitmapScalingMode="NearestNeighbor"`** (mengurangi overhead smoothing).
+- Gunakan **`DispatcherPriority.Render`** buat timer biar pas dengan WPF rendering.
+- **Reuse `WriteableBitmap`**, jangan buat baru tiap frame.
 
-Tapi ada hal yang harus Gw pikirin:
+📊 **Hasilnya**: Memori lebih stabil, CPU tetap 1-2% (wajar buat animasi ringan).
 
-1. **Gak semua animasi butuh 60 FPS** → Kadang 30 FPS udah cukup, lebih hemat performa.
-2. **Harus tetap fleksibel** → Biar gampang atur FPS tanpa ribet.
-
-Jadi, perubahan ini gak cuma bikin animasi lebih smooth, tapi juga kasih opsi buat jalan di 30 FPS kalau emang dibutuhkan.
+![](gambar/preload1.PNG)
 
 ---
 
-## Perubahan Utama:
-### 1. **Ganti ke CompositionTarget.Rendering**
-Daripada pakai `DispatcherTimer`, Gw sekarang pakai **`CompositionTarget.Rendering`** buat nge-render animasi:
+## 🚀 **Level Up: CompositionTarget.Rendering**
+> **Masalah:** `DispatcherTimer` bikin animasi **kadang stutter**. 😡
+
+✅ **Solusi:** Pakai **`CompositionTarget.Rendering`** biar sync langsung ke refresh rate layar. Hasilnya **super smooth, bebas stutter!** 🔥
 
 ```csharp
 CompositionTarget.Rendering += UpdateFrame;
 ```
 
-Kenapa ini lebih baik?
-- **Langsung sync ke refresh rate layar** → Bebas dari delay yang kadang ada di `DispatcherTimer`.
-- **Lebih smooth & stabil** → Gak ada lagi frame drop atau cegukan random.
+📊 **Keuntungan:**
+- **Langsung sync ke layar** → Animasi **ultra smooth** 🚀
+- **Bebas frame drop & cegukan** 🔄
+- **Support 30 FPS dengan frame skip** 📉
 
-![CPU lebih halus dan tidak stuttering](gambar/render1.PNG)
-
----
-
-### 2. **Frame Skip buat 30 FPS**
-Karena layar biasanya refresh di 60 Hz, Gw pakai trik **frame skip** buat 30 FPS:
 ```csharp
 if (frameRate == FrameRate.FPS30 && frameSkip % 2 != 0)
 {
@@ -84,70 +58,39 @@ if (frameRate == FrameRate.FPS30 && frameSkip % 2 != 0)
     return;
 }
 ```
-Ini bikin animasi tetep **smooth tanpa dipaksa jalan tiap frame**, lebih hemat performa.
+
+![](gambar/render1.PNG)
 
 ---
 
-### 3. **Tambahin Enum buat Opsi FPS**
-Gw juga bikin **enum `FrameRate`**, biar gampang pilih FPS yang diinginkan:
+## 🖼️ **Sprite Animation dengan Pooling**
+Sebelumnya, tiap update bikin **bitmap baru** ➝ Memori boros! 😱
 
-```csharp
-public enum FrameRate
-{
-    FPS30,
-    FPS60
-}
-```
-Sekarang gampang milih FPS:
-```csharp
-var sprite60FPS = new LoadingSprite(FrameRate.FPS60);
-var sprite30FPS = new LoadingSprite(FrameRate.FPS30);
-```
+✅ **Solusi:** Pakai **`SpritePool`** buat reuse bitmap. 📌
 
----
-
-## Hasil Akhir
-- **60 FPS**: Animasi jalan tiap frame rendering, ultra smooth.
-- **30 FPS**: Tetep smooth tanpa dipaksa jalan tiap frame, lebih hemat performa.
-- **Bebas cegukan**: Karena sync langsung ke layar pakai `CompositionTarget.Rendering`.
-
-Sekarang tinggal pilih FPS yang lu butuhin tanpa ribet! 🚀🔥
-
----
-
-# 🖼️ Sprite Animation dengan Pooling (LoadingSprite)
-
-Gw bikin ini buat **sprite animation yang lebih efisien**, gak boros memori, dan tetep smooth.  
-Sebelumnya, **bitmap dibuat terus-menerus**, yang bikin alokasi memori naik terus—**ini boros, bego!**  
-Sekarang, **pakai `SpritePool`**, jadi gak ada alokasi baru yang gak perlu.  
-
----
-
-## 🔥 Apa yang Di-fix?
 | Sebelum ❌ | Sekarang ✅ |
 |-----------|-----------|
-| **Bitmap baru dibuat tiap update** | **Pakai `SpritePool`, reuse bitmap!** |
-| **Gak ada batasan pool** | **Kalau pool habis, ada warning!** |
-| **Bitmap lama gak dikembalikan** | **Sekarang semua frame dikembalikan ke pool!** |
-| **Lama-lama ngelag karena memori kepake terus** | **Sekarang lebih stabil, gak ada beban tambahan!** |
+| **Bitmap baru tiap frame** | **Pakai `SpritePool`, reuse bitmap!** |
+| **Lama-lama ngelag** | **Sekarang lebih stabil, gak ada beban tambahan!** |
 
-![](gambar/spritepool.PNG)
-
----
-
-## 🎯 Cara Pakai
-1️⃣ **Pastikan lo udah setup `SpritePool`**  
-2️⃣ **Gunakan di `LoadingSprite` biar animasi lo lebih optimal**  
-3️⃣ **Jangan lupa binding di XAML biar MVVM tetep kepake**  
-
----
-
-## 📌 Contoh Binding di XAML
-Tinggal tempelin ini di XAML **tanpa perlu code-behind**. **MVVM tetap jalan!**
+📌 **Cara Pakai di XAML:**
 ```xml
 <Image Width="64" Height="64" Source="{Binding LoadingSprite.SpriteFrame}" Margin="30,30">
     <Image.RenderTransform>
         <RotateTransform Angle="{Binding LoadingSprite.RotationAngle}" CenterX="32" CenterY="32"/>
     </Image.RenderTransform>
 </Image>
+```
+
+![](gambar/spritepool.PNG)
+
+---
+
+## 🎯 **Kesimpulan**
+✅ **Dari `CroppedBitmap` ➝ `WriteableBitmap` ➝ `CompositionTarget.Rendering`**
+✅ **Memori lebih stabil, CPU lebih rendah**
+✅ **Animasi ultra smooth, bisa 30 atau 60 FPS**
+✅ **Sprite pooling bikin alokasi memori lebih efisien**
+
+🔥 **Sekarang animasi jalan lebih smooth, efisien, dan fleksibel!** 🚀
 
