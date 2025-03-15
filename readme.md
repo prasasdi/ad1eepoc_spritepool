@@ -1,96 +1,48 @@
-﻿# 🚀 **POC Sprite Animation in WPF**
+﻿# Kenapa Gue Pilih Teknik Ini 🖥️🎮
 
-## 🛠 **Teknologi yang Dipakai**
-- **.NET 6**
-- **WPF (MVVM Pattern)**
-- **WriteableBitmap** → Optimasi frame update
-- **CompositionTarget.Rendering** → Animasi smooth
-- **Sprite Pooling** → Efisiensi memori
+Repo ini kembangan dari [ad1eepoc_spriteanimation](https://github.com/prasasdi/ad1eepoc_spriteanimation). Kali ini, gue mau ngejar performa lebih ngebut buat sprite rendering! ⚡🔥
 
----
+## Kenapa Nggak Pakai WPF Bawaan? 🤔
+WPF bagus buat UI, tapi buat animasi sprite? Meh. Render-nya lambat, scaling kurang smooth, dan buffering-nya nggak optimal.
 
-## 🎬 **Awal Mula: GIF vs Sprite Sheet**
-Gw butuh animasi loading tanpa GIF, jadi pakai **sprite sheet**. Gw pilih sprite sheet karena ini teknik lama yang banyak dipakai di aplikasi desktop sebelum GIF bisa di-handle dengan baik.. Awalnya pakai **CroppedBitmap**, tapi memori naik terus karena alokasi objek baru tiap frame. 😵
+## Teknik yang Gue Pakai 🚀
+✅ **System.Windows.Media.Imaging** – Masih pakai ini buat kelola bitmap, tapi dengan optimasi pooling biar nggak boros resource!  
+✅ **Buffering Lebih Efisien** – Nggak bolak-balik load bitmap, jadi lebih cepat.  
+✅ **Scaling Smooth** – Sprite lebih tajam, anti-aliasing mantap.  
+✅ **Tetap di .NET** – Bisa nikmatin enaknya WPF tanpa sakit kepala performa.  
 
-Animasi jalan, tapi masalahnya memori terus naik. Setelah dicek, ternyata tiap update frame bikin objek baru, dan itu bikin alokasi memori numpuk.
-
-![](gambar/unoptimize-sprites.PNG)
-
-Btw, gw pakai MVVM sesuai dengan arsitektur WPF umumnya.
-
----
-
-## 🔧 **Optimasi dengan WriteableBitmap**
-✅ **WriteableBitmap** memungkinkan update tanpa alokasi baru. Namun, tetap ada naik-turun memori karena:
-- **GC masih berjalan** 🔄
-- **WPF pakai Deferred Rendering** 🖼️
-- **WritePixels() tetap butuh buffer sementara** 📌
-
-📌 **Solusi:**
-- Set **`RenderOptions.BitmapScalingMode="NearestNeighbor"`** (mengurangi overhead smoothing).
-- Gunakan **`DispatcherPriority.Render`** buat timer biar pas dengan WPF rendering.
-- **Reuse `WriteableBitmap`**, jangan buat baru tiap frame.
-
-📊 **Hasilnya**: Memori lebih stabil, CPU tetap 1-2% (wajar buat animasi ringan).
-
-![](gambar/preload1.PNG)
-
----
-
-## 🚀 **Level Up: CompositionTarget.Rendering**
-> **Masalah:** `DispatcherTimer` bikin animasi **kadang stutter**. 😡
-
-✅ **Solusi:** Pakai **`CompositionTarget.Rendering`** biar sync langsung ke refresh rate layar. Hasilnya **super smooth, bebas stutter!** 🔥
-
+### Snippet Core Rendering 🎨
 ```csharp
-CompositionTarget.Rendering += UpdateFrame;
-```
-
-📊 **Keuntungan:**
-- **Langsung sync ke layar** → Animasi **ultra smooth** 🚀
-- **Bebas frame drop & cegukan** 🔄
-- **Support 30 FPS dengan frame skip** 📉
-
-```csharp
-if (frameRate == FrameRate.FPS30 && frameSkip % 2 != 0)
+private BitmapSource LoadBitmap(string path)
 {
-    frameSkip++;
-    return;
+    BitmapImage bitmap = new BitmapImage();
+    bitmap.BeginInit();
+    bitmap.UriSource = new Uri(path, UriKind.RelativeOrAbsolute);
+    bitmap.CacheOption = BitmapCacheOption.OnLoad;
+    bitmap.EndInit();
+    bitmap.Freeze(); // Biar thread-safe dan lebih optimal
+    return bitmap;
 }
 ```
 
-![](gambar/render1.PNG)
+## Teknologi yang Dipakai 🛠️
+- **.NET 6** – Untuk apresiasi .NET 6 yang menjadi awalan karir gue di .NET, jadi gue pakai ini! 💙  
+- **WPF** – Buat UI dan event handling.  
+- **System.Windows.Media.Imaging** – Untuk optimasi rendering sprite dengan teknik pooling.  
+- **C#** – Bahasa utama untuk logic dan rendering.  
 
----
+## Cara Pakai 🚀
+1. **Clone repo ini**
+   ```sh
+   git clone https://github.com/prasasdi/ad1eepoc_spritepool.git
+   cd ad1eepoc_spritepool
+   ```
+2. **Buka di Visual Studio** (disarankan versi terbaru).  
+   - Pastikan punya **.NET 6 SDK** terinstal.  
+   - Buka `ad1eepoc_spritepool.sln`.  
+3. **Jalankan aplikasi** dengan `F5` atau tombol *Run* di Visual Studio.  
+4. **Enjoy! 🎮**
 
-## 🖼️ **Sprite Animation dengan Pooling**
-Sebelumnya, tiap update bikin **bitmap baru** ➝ Memori boros! 😱
-
-✅ **Solusi:** Pakai **`SpritePool`** buat reuse bitmap. 📌
-
-| Sebelum ❌ | Sekarang ✅ |
-|-----------|-----------|
-| **Bitmap baru tiap frame** | **Pakai `SpritePool`, reuse bitmap!** |
-| **Lama-lama ngelag** | **Sekarang lebih stabil, gak ada beban tambahan!** |
-
-📌 **Cara Pakai di XAML:**
-```xml
-<Image Width="64" Height="64" Source="{Binding LoadingSprite.SpriteFrame}" Margin="30,30">
-    <Image.RenderTransform>
-        <RotateTransform Angle="{Binding LoadingSprite.RotationAngle}" CenterX="32" CenterY="32"/>
-    </Image.RenderTransform>
-</Image>
-```
-
-![](gambar/spritepool.PNG)
-
----
-
-## 🎯 **Kesimpulan**
-✅ **Dari `CroppedBitmap` ➝ `WriteableBitmap` ➝ `CompositionTarget.Rendering`**
-✅ **Memori lebih stabil, CPU lebih rendah**
-✅ **Animasi ultra smooth, bisa 30 atau 60 FPS**
-✅ **Sprite pooling bikin alokasi memori lebih efisien**
-
-🔥 **Sekarang animasi jalan lebih smooth, efisien, dan fleksibel!** 🚀
+## Kesimpulan 🎯
+Gue tetap pakai `System.Windows.Media.Imaging`, tapi dengan teknik pooling buat optimasi performa. Ke depan? Mungkin bakal coba Vulkan! 🚀🤘
 
