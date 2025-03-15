@@ -1,4 +1,5 @@
-﻿using MainAplikasi.Helpers;
+﻿using MainAplikasi.Enums;
+using MainAplikasi.Helpers;
 using MainAplikasi.Models;
 using System;
 using System.Collections.Generic;
@@ -14,11 +15,13 @@ namespace MainAplikasi.Presentations.MainWindow
         public MainWindowViewModel(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
-            LoadingSprite = new(FrameRate.FPS60);
-            RunSprite = new(FrameRate.FPS60);
+            LoadingSprite = new(E_FrameRate.FPS60);
+            RunSpriteRight = new();
+            RunSpriteLeft = new(direction: E_RunDirection.RunLeft);
         }
 
         public LoadingSprite LoadingSprite { get; set; }
-        public RunSprite RunSprite { get; set; }
+        public RunSprite RunSpriteRight { get; set; }
+        public RunSprite RunSpriteLeft { get; set; }
     }
 }

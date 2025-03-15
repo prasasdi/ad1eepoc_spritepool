@@ -1,4 +1,5 @@
-﻿using MainAplikasi.ResourceManagers.Sprites.ObjectPooling;
+﻿using MainAplikasi.Enums;
+using MainAplikasi.ResourceManagers.Sprites.ObjectPooling;
 using System;
 using System.ComponentModel;
 using System.Windows;
@@ -7,60 +8,67 @@ using System.Windows.Media.Imaging;
 
 namespace MainAplikasi.Models
 {
+    public enum E_RunDirection
+    {
+        RunRight,
+        RunLeft
+    }
+
     public class RunSprite : INotifyPropertyChanged
     {
         private readonly WriteableBitmap spriteSheet;
         private readonly int frameWidth = 108;  // 864 / 8
         private readonly int frameHeight = 140; // 280 / 2
-        private readonly int totalFrames = 8;   // Animasi ke kanan (bisa 16 kalau termasuk ke kiri)
+        private readonly int totalFrames = 8;   // Satu arah punya 8 frame
         private int currentFrame = 0;
 
         private readonly WriteableBitmap[] frameBuffer;
-        private readonly FrameRate frameRate;
-        private int frameSkip = 0; // Untuk handling 30 FPS di layar 60 Hz
+        private readonly E_FrameRate frameRate;
+        private int frameSkip = 0; // Untuk handling FPS rendah di layar 60 Hz
 
         private readonly SpritePool spritePool;
 
         public WriteableBitmap SpriteFrame { get; private set; }
 
-        public RunSprite(FrameRate fps = FrameRate.FPS60)
+        public RunSprite(E_FrameRate fps = E_FrameRate.FPS12, E_RunDirection direction = E_RunDirection.RunRight)
         {
             frameRate = fps;
-
-            // SpritePool dengan jumlah frame animasi
             spritePool = new SpritePool(frameWidth, frameHeight, PixelFormats.Bgra32, totalFrames);
 
-            // Load sprite sheet sekali saja
             BitmapImage image = new BitmapImage(new Uri("pack://application:,,,/Assets/scottpilgrim_run.png", UriKind.Absolute));
             spriteSheet = new WriteableBitmap(image);
 
-            // Inisialisasi buffer frame
             frameBuffer = new WriteableBitmap[totalFrames];
+
+            // Ambil sprite dari baris tertentu
+            // karena left adalah invert dari right, ini ga perlu. Kecuali ada yang perlu ambil sprite berbeda
+            int yOffset = (direction == E_RunDirection.RunLeft) ? 0 : 0; // RunRight di baris kedua
 
             for (int i = 0; i < totalFrames; i++)
             {
-                Int32Rect sourceRect = new Int32Rect(i * frameWidth, 0, frameWidth, frameHeight);
-
-                // Ambil bitmap dari pool, fallback ke instance baru kalau pool habis
+                Int32Rect sourceRect = new Int32Rect(i * frameWidth, yOffset, frameWidth, frameHeight);
                 frameBuffer[i] = spritePool.GetBitmap() ?? new WriteableBitmap(frameWidth, frameHeight, 96, 96, PixelFormats.Bgra32, null);
 
                 int stride = (frameWidth * 32 + 7) / 8;
                 byte[] pixelData = new byte[frameHeight * stride];
                 spriteSheet.CopyPixels(sourceRect, pixelData, stride, 0);
 
+                if (direction == E_RunDirection.RunLeft)
+                {
+                    FlipHorizontal(pixelData, frameWidth, frameHeight, stride);
+                }
+
                 frameBuffer[i].WritePixels(new Int32Rect(0, 0, frameWidth, frameHeight), pixelData, stride, 0);
             }
 
-            // Set frame awal
             SpriteFrame = frameBuffer[0];
-
-            // Gunakan CompositionTarget.Rendering untuk animasi
             CompositionTarget.Rendering += UpdateFrame;
         }
 
         private void UpdateFrame(object sender, EventArgs e)
         {
-            if (frameRate == FrameRate.FPS30 && frameSkip % 2 != 0)
+            if ((frameRate == E_FrameRate.FPS30 && frameSkip % 2 != 0) ||
+                (frameRate == E_FrameRate.FPS12 && frameSkip % 5 != 0))
             {
                 frameSkip++;
                 return;
@@ -73,7 +81,7 @@ namespace MainAplikasi.Models
             currentFrame = (currentFrame + 1) % totalFrames;
             SpriteFrame = frameBuffer[currentFrame];
 
-            // Kembalikan frame sebelumnya ke pool **hanya kalau masih dari pool**
+            // Kembalikan frame sebelumnya ke pool jika masih dari pool
             if (prevFrame != null && spritePool.Contains(prevFrame))
             {
                 spritePool.ReturnBitmap(prevFrame);
@@ -81,6 +89,27 @@ namespace MainAplikasi.Models
 
             OnPropertyChanged(nameof(SpriteFrame));
             frameSkip++;
+        }
+
+        private void FlipHorizontal(byte[] pixelData, int width, int height, int stride)
+        {
+            int bytesPerPixel = (PixelFormats.Bgra32.BitsPerPixel + 7) / 8;
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width / 2; x++) // Hanya sampai setengah, karena swapping
+                {
+                    int leftIndex = (y * stride) + (x * bytesPerPixel);
+                    int rightIndex = (y * stride) + ((width - 1 - x) * bytesPerPixel);
+
+                    for (int b = 0; b < bytesPerPixel; b++)
+                    {
+                        byte temp = pixelData[leftIndex + b];
+                        pixelData[leftIndex + b] = pixelData[rightIndex + b];
+                        pixelData[rightIndex + b] = temp;
+                    }
+                }
+            }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

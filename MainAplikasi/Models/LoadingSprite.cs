@@ -1,4 +1,5 @@
-﻿using MainAplikasi.ResourceManagers.Sprites.ObjectPooling;
+﻿using MainAplikasi.Enums;
+using MainAplikasi.ResourceManagers.Sprites.ObjectPooling;
 using System;
 using System.ComponentModel;
 using System.Windows;
@@ -8,12 +9,6 @@ using System.Windows.Threading;
 
 namespace MainAplikasi.Models
 {
-    public enum FrameRate
-    {
-        FPS30,
-        FPS60
-    }
-
     public class LoadingSprite : INotifyPropertyChanged
     {
         private readonly WriteableBitmap spriteSheet;
@@ -24,7 +19,7 @@ namespace MainAplikasi.Models
         private double rotationAngle = 0;
 
         private readonly WriteableBitmap[] frameBuffer;
-        private readonly FrameRate frameRate;
+        private readonly E_FrameRate frameRate;
         private int frameSkip = 0; // Untuk handling 30 FPS di layar 60 Hz
 
         private readonly SpritePool spritePool; // Tambahkan SpritePool untuk pengelolaan memory bitmap
@@ -45,7 +40,7 @@ namespace MainAplikasi.Models
         /// Menggunakan SpritePool untuk mengelola frame agar lebih efisien dalam alokasi memori.
         /// </summary>
         /// <param name="fps">Frame rate animasi.</param>
-        public LoadingSprite(FrameRate fps = FrameRate.FPS60)
+        public LoadingSprite(E_FrameRate fps = E_FrameRate.FPS60)
         {
             frameRate = fps;
 
@@ -91,7 +86,7 @@ namespace MainAplikasi.Models
         /// </summary>
         private void UpdateFrame(object sender, EventArgs e)
         {
-            if (frameRate == FrameRate.FPS30 && frameSkip % 2 != 0) // Untuk 30 FPS, update setiap 2 frame rendering
+            if (frameRate == E_FrameRate.FPS30 && frameSkip % 2 != 0) // Untuk 30 FPS, update setiap 2 frame rendering
             {
                 frameSkip++;
                 return;

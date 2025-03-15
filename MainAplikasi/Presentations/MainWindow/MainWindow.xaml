@@ -5,29 +5,36 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MainAplikasi"
         mc:Ignorable="d"
-        Title="MainWindow" Height="200" Width="200"
-        SizeToContent="WidthAndHeight"
-        ResizeMode="CanResize">
+        Title="MainWindow" Height="200" Width="200">
     <Grid>
         <!-- Loading Sprite -->
         <Image x:Name="SpriteLoadingImg"
                Width="64" Height="64"
                Source="{Binding LoadingSprite.SpriteFrame}"
-               VerticalAlignment="Center" HorizontalAlignment="Left"
-               Margin="10">
+               VerticalAlignment="Top" HorizontalAlignment="Left"
+               Margin="10,10,0,0">
             <Image.RenderTransform>
                 <RotateTransform Angle="{Binding LoadingSprite.RotationAngle}" CenterX="32" CenterY="32"/>
             </Image.RenderTransform>
         </Image>
 
         <!-- Run Sprite -->
-        <Image x:Name="RunSpritesImg"
+        <Image x:Name="RunSpritesRightImg"
                Width="64" Height="64"
-               Source="{Binding RunSprite.SpriteFrame}"
+               Source="{Binding RunSpriteRight.SpriteFrame}"
                VerticalAlignment="Bottom" HorizontalAlignment="Right"
                Margin="10">
             <Image.RenderTransform>
-                <RotateTransform Angle="{Binding RunSprite.RotationAngle}" CenterX="32" CenterY="32"/>
+                <RotateTransform Angle="{Binding RunSpriteRight.RotationAngle}" CenterX="32" CenterY="32"/>
+            </Image.RenderTransform>
+        </Image>
+        <Image x:Name="RunSpritesLeftImg"
+               Width="64" Height="64"
+               Source="{Binding RunSpriteLeft.SpriteFrame}"
+               VerticalAlignment="Bottom" HorizontalAlignment="Left"
+               Margin="10">
+            <Image.RenderTransform>
+                <RotateTransform Angle="{Binding RunSpriteLeft.RotationAngle}" CenterX="32" CenterY="32"/>
             </Image.RenderTransform>
         </Image>
     </Grid>
